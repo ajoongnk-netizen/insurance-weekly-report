@@ -1,21 +1,17 @@
 import os
 import datetime
-from google import genai
+import json
+import urllib.request
+import urllib.error
 
 def generate_weekly_report():
-    # 1. API 키 검증
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        raise ValueError("GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.")
+        raise ValueError("GEMINI_API_KEY가 설정되지 않았습니다.")
 
-    # 2. 최신 google-genai Client 초기화
-    client = genai.Client(api_key=api_key)
-
-    # 3. 날짜 설정
     today = datetime.date.today()
     date_str = today.strftime("%Y년 %m월 %d일")
 
-    # 4. 프롬프트 작성
     prompt = f"""
     당신은 30년 차 보험 영업전략 및 데이터 분석 전문가입니다.
     오늘 날짜({date_str}) 기준으로 최신 보험 산업 및 GA 시장 동향 리포트를 작성해 주세요.
@@ -32,26 +28,36 @@ def generate_weekly_report():
     """
 
     print("Gemini API 호출 중...")
-    
-    # 최신 공식 지원 모델: gemini-2.5-flash
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=prompt,
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}]
+    }
+
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST"
     )
 
-    content = response.text.strip()
-    
-    # 마크다운 태그 정돈
+    try:
+        with urllib.request.urlopen(req) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            content = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8")
+        raise RuntimeError(f"Gemini API 호출 실패 (HTTP {e.code}): {error_body}")
+
     if content.startswith("```html"):
         content = content[7:]
     if content.startswith("```"):
         content = content[3:]
     if content.endswith("```"):
         content = content[:-3]
-        
     content = content.strip()
 
-    # 5. index.html 저장
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(content)
 
