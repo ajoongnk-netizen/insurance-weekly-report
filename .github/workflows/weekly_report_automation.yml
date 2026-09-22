@@ -1,4 +1,4 @@
-name: Weekly Insurance Report Generator
+name: Weekly Insurance Report Generator 
 
 on:
   schedule:
