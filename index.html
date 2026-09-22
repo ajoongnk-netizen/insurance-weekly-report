@@ -1,0 +1,84 @@
+import os
+import datetime
+import json
+import urllib.parse
+import feedparser
+import google.generativeai as genai
+
+# 1. Gemini API 설정 (GitHub Secrets에 저장된 GEMINI_API_KEY 환경변수 로드)
+GENAI_API_KEY = os.environ.get("GEMINI_API_KEY")
+genai.configure(api_key=GENAI_API_KEY)
+
+def fetch_insurance_news():
+    """최근 보험 시장 주요 뉴스 RSS 자동 수집"""
+    keywords = ["금융감독원 GA", "실손보험 전환", "간병보험", "연금보험 확정금리"]
+    collected_text = ""
+    
+    for kw in keywords:
+        encoded_kw = urllib.parse.quote(kw)
+        rss_url = f"https://news.google.com/rss/search?q={encoded_kw}&hl=ko&gl=KR&ceid=KR:ko"
+        feed = feedparser.parse(rss_url)
+        
+        collected_text += f"\n=== 키워드: {kw} ===\n"
+        for entry in feed.entries[:3]: # 상위 3개 주요 기사 추출
+            collected_text += f"- 제목: {entry.title}\n  요약: {entry.summary}\n"
+            
+    return collected_text
+
+def generate_weekly_report_data(news_data, date_str):
+    """Gemini AI 분석 및 주간 데이터 구조화"""
+    model = genai.GenerativeModel("gemini-1.5-pro")
+    
+    prompt = f"""
+    당신은 대한민국 최고 수준의 보험 시장 수석 분석가이자 GA 영업 전략 컨설턴트입니다.
+    기준 일자: {date_str}
+    수집된 최신 뉴스 데이터:
+    {news_data}
+
+    위 데이터를 분석하여 주간 보험 트렌드 보고서 데이터를 아래 JSON 형식에 맞추어 생성해주세요.
+    반드시 JSON 형식으로만 응답해야 합니다.
+    """
+    
+    response = model.generate_content(
+        prompt,
+        generation_config={"response_mime_type": "application/json"}
+    )
+    
+    return json.loads(response.text)
+
+def update_markdown_file(data, filepath="weekly_insurance_report.md"):
+    """JSON 데이터를 기반으로 마크다운 보고서 파일 자동 생성 및 저장"""
+    md_content = f"""# [주간 보험 시장 트렌드 및 영업 전략 보고서]
+
+**보고서 개요**
+* **작성일자:** {data.get('week_info', '최신 주차')}
+* **보고대상:** 경영진, 영업총괄 임원, GA 지점장 및 Field 리더
+
+## Ⅰ. 경영진 요약 (Executive Summary)
+* **3대 핵심 키워드:** {', '.join([f"`{k}`" for k in data.get('executive_summary', {}).get('keywords', ['GA 1200%', '5세대 실손', '확정연금'])])}
+* **현장 영업 기조:** {data.get('executive_summary', {}).get('direction', '유지율 연동 고CSM 건강보험 및 상생 DB 개척')}
+
+## Ⅱ. 주요 뉴스 TOP 3
+"""
+    top_news = data.get('top_news', [])
+    for news in top_news:
+        md_content += f"### {news.get('id', 1)}. {news.get('title', '주요 뉴스')}\n"
+        md_content += f"* **내용:** {news.get('summary', '')}\n"
+        md_content += f"* **Field Action:** {news.get('field_action', '')}\n\n"
+
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(md_content)
+    print(f"✅ {filepath} 자동 저장 완려!")
+
+if __name__ == "__main__":
+    today = datetime.datetime.now()
+    week_str = f"{today.year}년 {today.month}월 {(today.day - 1) // 7 + 1}주차"
+    
+    print("1. 최근 보험 시장 뉴스 RSS 데이터 수집 중...")
+    news_text = fetch_insurance_news()
+    
+    print("2. Gemini AI 분석 실행 중...")
+    report_json = generate_weekly_report_data(news_text, week_str)
+    
+    print("3. 주간 보고서 파일(weekly_insurance_report.md) 자동 생성 중...")
+    update_markdown_file(report_json)
