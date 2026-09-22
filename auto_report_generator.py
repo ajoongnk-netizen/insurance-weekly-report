@@ -8,7 +8,7 @@ def generate_weekly_report():
     if not api_key:
         raise ValueError("GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.")
 
-    # 2. Gemini 클라이언트 초기화
+    # 2. Gemini 클라이언트 초기화 (최신 v1 API 버전 지정)
     client = genai.Client(api_key=api_key)
 
     # 3. 현재 날짜 계산
@@ -33,9 +33,9 @@ def generate_weekly_report():
 
     print("Gemini API 호출 중...")
     
-    # 모델명을 정확한 gemini-1.5-flash로 수정
+    # 모델명을 최신 gemini-2.0-flash 로 변경
     response = client.models.generate_content(
-        model='gemini-1.5-flash',
+        model='gemini-2.0-flash',
         contents=prompt,
     )
 
