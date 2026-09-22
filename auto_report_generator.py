@@ -33,9 +33,9 @@ def generate_weekly_report():
 
     print("Gemini API 호출 중...")
     
-    # 모델명을 정상 지원되는 gemini-2.5-flash로 수정
+    # 모델명을 정확한 gemini-1.5-flash로 수정
     response = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-1.5-flash',
         contents=prompt,
     )
 
