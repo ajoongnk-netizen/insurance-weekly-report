@@ -1,17 +1,21 @@
 import os
 import datetime
-import google.generativeai as genai
+from google import genai
 
 def generate_weekly_report():
+    # 1. GitHub Secrets에서 API 키 불러오기
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        raise ValueError("GEMINI_API_KEY가 없습니다.")
+        raise ValueError("GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.")
 
-    genai.configure(api_key=api_key)
+    # 2. 최신 SDK 클라이언트 초기화
+    client = genai.Client(api_key=api_key)
 
+    # 3. 현재 날짜 계산
     today = datetime.date.today()
     date_str = today.strftime("%Y년 %m월 %d일")
 
+    # 4. 프롬프트 작성
     prompt = f"""
     당신은 30년 차 보험 영업전략 및 데이터 분석 전문가입니다.
     오늘 날짜({date_str}) 기준으로 최신 보험 산업 및 GA 시장 동향 리포트를 작성해 주세요.
@@ -29,12 +33,15 @@ def generate_weekly_report():
 
     print("Gemini API 호출 중...")
     
-    # 구형 파이프라인 표준 호환 모델 호출
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    response = model.generate_content(prompt)
+    # 정식 모델 엔드포인트 지원 형식인 models/gemini-1.5-flash 지정
+    response = client.models.generate_content(
+        model='models/gemini-1.5-flash',
+        contents=prompt,
+    )
 
     content = response.text.strip()
     
+    # 마크다운 태그 정리
     if content.startswith("```html"):
         content = content[7:]
     if content.startswith("```"):
@@ -44,6 +51,7 @@ def generate_weekly_report():
         
     content = content.strip()
 
+    # 5. index.html 저장
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(content)
 
