@@ -22,8 +22,8 @@ def generate_weekly_report():
 
     [리포트 포함 내용]
     1. 금주 주요 경제 및 보험 시장 이슈
-2. GA(단독/연합) 채널 영업 및 상품 동향
-3. 현장 영업 조직을 위한 핵심 전략 추천
+    2. GA(단독/연합) 채널 영업 및 상품 동향
+    3. 현장 영업 조직을 위한 핵심 전략 추천
 
     [작성 규칙]
     - 모바일 및 PC에서 보기 편한 세련되고 현대적인 HTML 문서로 작성해 주세요.
@@ -32,6 +32,8 @@ def generate_weekly_report():
     """
 
     print("Gemini API 호출 중...")
+    
+    # 모델명을 정상 지원되는 gemini-2.5-flash로 수정
     response = client.models.generate_content(
         model='gemini-2.5-flash',
         contents=prompt,
